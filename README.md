@@ -11,4 +11,4 @@
 ## redevelop of the Hyperledger fabric  as follows:
 <p>fabric-ca and fabric can't sovle  account, applications which isolated issues; </p>
 <p>performance monitoring and intelligent routing of fabric nodes;</p>
-<p>dynamic extension node and security issues</p>
+<p>dynamic extension node and security issues </p>
