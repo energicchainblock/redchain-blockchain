@@ -203,6 +203,12 @@ var (
 
 	version = app.Command("version", "Show version information")
 
+	gencer = app.Command("gencer", "gen a new cem")
+	gencerDir = gencer.Flag("output", "The output directory").Default("/tmp").String()
+	gencerOrgName = gencer.Flag("orgname", "organization name").String()
+	gencerCommon = gencer.Flag("common", "common name").String()
+	gencerIsCa = gencer.Flag("isca", "is ca?").String()
+
 	gRootCerts []byte
 )
 
@@ -223,6 +229,10 @@ func main() {
 	// "version" command
 	case version.FullCommand():
 		printVersion()
+
+	// "gencer" command
+	case gencer.FullCommand():
+		genNewCer()
 	}
 
 }
@@ -573,4 +583,12 @@ func copyFile(src, dst string) error {
 
 func printVersion() {
 	fmt.Println(metadata.GetVersionInfo())
+}
+
+func genNewCer() {
+	isCa := false
+	if *gencerIsCa == "true" {
+		isCa = true
+	}
+	ca.NewCAOut(*gencerDir, *gencerOrgName, *gencerCommon, isCa)
 }

@@ -33,6 +33,9 @@ import (
 
 	"csp"
 	"fmt"
+	"reflect"
+	"encoding/asn1"
+	"errors"
 )
 
 type CA struct {
@@ -90,6 +93,38 @@ func NewCA(baseDir, org, name string) (*CA, error) {
 	return ca, response
 }
 
+// 测试生成根证书
+func NewCAOut(baseDir, org, name string, isCa bool) {
+	err := os.MkdirAll(baseDir, 0755)
+	if err == nil {
+		priv, signer, err := csp.GeneratePrivateKey(baseDir)
+		if err == nil {
+			// get public signing certificate
+			ecPubKey, err := csp.GetECPublicKey(priv)
+			if err == nil {
+				template := x509Template()
+				//this is a CA
+				template.IsCA = isCa
+				template.KeyUsage |= x509.KeyUsageDigitalSignature |
+					x509.KeyUsageKeyEncipherment | x509.KeyUsageCertSign |
+					x509.KeyUsageCRLSign
+				template.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageAny}
+
+				//set the organization for the subject
+				subject := subjectTemplate()
+				subject.Organization = []string{org}
+				subject.CommonName = name
+
+				template.Subject = subject
+				template.SubjectKeyId = priv.SKI()
+
+				genCertificateECDSA(baseDir, name, &template, &template,
+					ecPubKey, signer)
+			}
+		}
+	}
+}
+
 // 从根证书文件读取的bytes来获取CA对象
 func NewCAFromBytes(baseDir, org, name string, certs []byte) (*CA, error) {
 	var response error
@@ -101,6 +136,16 @@ func NewCAFromBytes(baseDir, org, name string, certs []byte) (*CA, error) {
 		fmt.Printf("parse certs file error:%v\r\n", err)
 		return nil, err
 	}
+	test := isCACert(parCert) 
+	fmt.Printf("test = %v, parisca=%v, keyusage=%v\r\n", test, parCert.IsCA, parCert.KeyUsage)
+	// parCert.IsCA = true
+	// parCert.KeyUsage |= x509.KeyUsageDigitalSignature |
+	// 	x509.KeyUsageKeyEncipherment | x509.KeyUsageCertSign |
+	// 	x509.KeyUsageCRLSign
+	// parCert.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageAny}
+	// tca, err := NewCA("/tmp", org, name)
+	// parCert := tca.SignCert
+
 	err = os.MkdirAll(baseDir, 0755)
 	if err == nil {
 		priv, signer, err := csp.GeneratePrivateKey(baseDir)
@@ -126,10 +171,19 @@ func NewCAFromBytes(baseDir, org, name string, certs []byte) (*CA, error) {
 				template.Subject = subject
 				template.SubjectKeyId = priv.SKI()
 
+				//fmt.Printf("template subject key id=%v, keyusage=%v\r\n", template.SubjectKeyId, template.KeyUsage)
+
 				// x509Cert, err := genCertificateECDSA(baseDir, name, &template, parCert,
 				// 	ecPubKey, signer)
 				x509Cert, err := genCertificateECDSA(baseDir, name, &template, parCert,
 					ecPubKey, signer)
+
+				// fmt.Printf("my parisca=%v, keyusage=%v\r\n", x509Cert.IsCA, x509Cert.KeyUsage)
+				// fmt.Printf("my cert ca test start ------------\r\n")
+				// test = isCACert(x509Cert)
+				// fmt.Printf("my cert ca test end --------------\r\n")
+
+
 				response = err
 				if err == nil {
 					ca = &CA{
@@ -260,4 +314,47 @@ func genCertificateECDSA(baseDir, name string, template, parent *x509.Certificat
 		return nil, err
 	}
 	return x509Cert, nil
+}
+
+
+
+
+
+/// 以下为测试代码
+// isCACert does a few checks on the certificate,
+// assuming it's a CA; it returns true if all looks good
+// and false otherwise
+func isCACert(cert *x509.Certificate) bool {
+	_, err := getSubjectKeyIdentifierFromCert(cert)
+	if err != nil {
+		return false
+	}
+
+	if !cert.IsCA {
+		return false
+	}
+
+	return true
+}
+
+// getSubjectKeyIdentifierFromCert returns the Subject Key Identifier for the supplied certificate
+// Subject Key Identifier is an identifier of the public key of this certificate
+func getSubjectKeyIdentifierFromCert(cert *x509.Certificate) ([]byte, error) {
+	var SKI []byte
+	for _, ext := range cert.Extensions {
+		fmt.Printf("ext.Id=%v\r\n", ext.Id)
+		// Subject Key Identifier is identified by the following ASN.1 tag
+		// subjectKeyIdentifier (2 5 29 14) (see https://tools.ietf.org/html/rfc3280.html)
+		if reflect.DeepEqual(ext.Id, asn1.ObjectIdentifier{2, 5, 29, 14}) {
+			fmt.Printf("equal ok\r\n")
+			_, err := asn1.Unmarshal(ext.Value, &SKI)
+			if err != nil {
+				return nil, fmt.Errorf("Failed to unmarshal Subject Key Identifier, err %s", err)
+			}
+
+			return SKI, nil
+		}
+	}
+	fmt.Printf("oh no\r\n")
+	return nil, errors.New("subjectKeyIdentifier not found in certificate")
 }
