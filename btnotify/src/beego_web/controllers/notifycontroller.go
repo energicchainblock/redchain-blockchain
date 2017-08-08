@@ -22,13 +22,13 @@ func (this *NotifyController) Notify() {
 		return
 	}
 
-	err := db.InsertOrder(sender, hash, val)
-	if err != nil {
-		this.Ctx.Output.Body([]byte("error"))
-		return
-	}
-
 	fmt.Printf("sender=%v, hash=%v, sv=%v, test=%v\r\n", sender, hash, sv, test)
+
+	// err := db.InsertOrder(sender, hash, val)
+	// if err != nil {
+	// 	this.Ctx.Output.Body([]byte("error"))
+	// 	return
+	// }
 
 	this.Ctx.Output.Body([]byte("*ok*"))
 }

@@ -7,4 +7,5 @@ import (
 
 func init() {
 	beego.Router("/notify", &controllers.NotifyController{}, "*:Notify")
+	beego.Router("/order", &controllers.OrderController{}, "*:Order")
 }
