@@ -8,21 +8,18 @@ import (
 	. "wallet"
 )
 
-type WalletInterface interface {
-	Wallet(stub shim.ChaincodeStubInterface, from string, to string, param string) pb.Response
-	Recharge(stub shim.ChaincodeStubInterface, from string, to string, param string) pb.Response
-	Transfer(stub shim.ChaincodeStubInterface, from string, to string, param string) pb.Response
-}
-
-type WalletChain struct{}
-
 var (
-	_handle WalletInterface
+	_handleFunc map[string](func(shim.ChaincodeStubInterface, string, string, string) pb.Response)
 )
 
 func init() {
-
+	_handleFunc = make(map[string](func(shim.ChaincodeStubInterface, string, string, string) pb.Response))
+	_handleFunc["wallet"] = WalletHandle
+	_handleFunc["recharge"] = RechargeHandle
+	_handleFunc["transfer"] = TransferHandle
 }
+
+type WalletChain struct{}
 
 func (w *WalletChain) Init(stub shim.ChaincodeStubInterface) pb.Response {
 	return shim.Success(nil)
@@ -41,18 +38,13 @@ func (w *WalletChain) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	param := args[4]
 	fmt.Printf("subfunc=%v, cmd=%v, to=%v, from=%v, param=%v\r\n", subFunc, cmd, to, from, param)
 	cmd = strings.ToLower(cmd)
-	if cmd == "wallet" {
-		return _handle.Wallet(stub, from, to, param)
-	} else if cmd == "recharge" {
-		return _handle.Recharge(stub, from, to, param)
-	} else if cmd == "transfer" {
-		return _handle.Transfer(stub, from, to, param)
+	if fun, ok := _handleFunc[cmd]; ok {
+		return fun(stub, from, to, param)
 	}
 	return shim.Error("Invalid invoke function name.\r\n")
 }
 
 func main() {
-	_handle = &WalletHandle{}
 	err := shim.Start(new(WalletChain))
 	if err != nil {
 		fmt.Printf("Error starting Wallet chaincode: %v\r\n", err)

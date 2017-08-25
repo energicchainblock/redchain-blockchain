@@ -6,9 +6,7 @@ import (
 	pb "github.com/hyperledger/fabric/protos/peer"
 )
 
-type WalletHandle struct{}
-
-func (wh *WalletHandle) Wallet(stub shim.ChaincodeStubInterface, from string, to string, param string) pb.Response {
+func WalletHandle(stub shim.ChaincodeStubInterface, from string, to string, param string) pb.Response {
 	addr := from
 	walletBytes, err := stub.GetState(addr)
 	if err != nil {
@@ -29,7 +27,7 @@ func (wh *WalletHandle) Wallet(stub shim.ChaincodeStubInterface, from string, to
 	return shim.Success(ret)
 }
 
-func (wh *WalletHandle) Recharge(stub shim.ChaincodeStubInterface, from string, to string, param string) pb.Response {
+func RechargeHandle(stub shim.ChaincodeStubInterface, from string, to string, param string) pb.Response {
 	addr := from
 	walletBytes, err := stub.GetState(addr)
 	if err != nil {
@@ -61,7 +59,7 @@ func (wh *WalletHandle) Recharge(stub shim.ChaincodeStubInterface, from string, 
 	return shim.Success(ret)
 }
 
-func (wh *WalletHandle) Transfer(stub shim.ChaincodeStubInterface, from string, to string, param string) pb.Response {
+func TransferHandle(stub shim.ChaincodeStubInterface, from string, to string, param string) pb.Response {
 	req := &TransferReq{}
 	err := json.Unmarshal([]byte(param), req)
 	if err != nil {
