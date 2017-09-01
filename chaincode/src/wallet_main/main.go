@@ -14,9 +14,11 @@ var (
 
 func init() {
 	_handleFunc = make(map[string](func(shim.ChaincodeStubInterface, string, string, string) pb.Response))
-	_handleFunc["wallet"] = WalletHandle
-	_handleFunc["recharge"] = RechargeHandle
-	_handleFunc["transfer"] = TransferHandle
+	_handleFunc["init"] = InitHandle
+	_handleFunc["payment"] = TransferHandle
+	_handleFunc["refund"] = TransferHandle
+	_handleFunc["reward"] = RewardHandle
+	_handleFunc["f-to-f"] = TransferHandle
 }
 
 type WalletChain struct{}

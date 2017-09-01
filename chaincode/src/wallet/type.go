@@ -1,16 +1,16 @@
 package wallet
 
 type Wallet struct {
-	Balance float64 `json:"balance"`
-	In      float64 `json:"in"`
-	Out     float64 `json:"out"`
+	Available float64 `json:"available"`
+	Ico       float64 `json:"ico"`
+	Version   int64   `json:"version"`
 }
 
-type RechargeReq struct {
-	Way   int8    `json:"way"`
-	Value float64 `json:"value"`
+type CommonReq struct {
+	Number float64 `json:"number"`
 }
 
-type TransferReq struct {
-	Value float64 `json:"value"`
+type CommonReply struct {
+	Address   string  `json:"address"`
+	Available float64 `json:"available"`
 }
