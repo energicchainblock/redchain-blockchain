@@ -30,20 +30,39 @@ func (w *WalletChain) Init(stub shim.ChaincodeStubInterface) pb.Response {
 func (w *WalletChain) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	_, args := stub.GetFunctionAndParameters()
 	fmt.Printf("args=%v\r\n", args)
-	if len(args) < 5 {
+	if len(args) < 1 {
 		return shim.Error("Incorrect number of arguments.")
 	}
 	subFunc := args[0]
-	cmd := args[1]
-	to := args[2]
-	from := args[3]
-	param := args[4]
-	fmt.Printf("subfunc=%v, cmd=%v, to=%v, from=%v, param=%v\r\n", subFunc, cmd, to, from, param)
-	cmd = strings.ToLower(cmd)
-	if fun, ok := _handleFunc[cmd]; ok {
-		return fun(stub, from, to, param)
+	if subFunc == "query" {
+		if len(args) < 2 {
+			return shim.Error("Incorrect number of arguments")
+		}
+		cmd := args[1]
+		if cmd == "basic" {
+			key := args[2]
+			return QueryHandle(stub, key)
+		} else if cmd == "total" {
+			q := args[2]
+			return TotalHandle(stub, q)
+		} else {
+			return shim.Error("invalid query cmd.")
+		}
+	} else {
+		if len(args) < 5 {
+			return shim.Error("Incorrect number of arguments")
+		}
+		cmd := args[1]
+		to := args[2]
+		from := args[3]
+		param := args[4]
+		fmt.Printf("subfunc=%v, cmd=%v, to=%v, from=%v, param=%v\r\n", subFunc, cmd, to, from, param)
+		cmd = strings.ToLower(cmd)
+		if fun, ok := _handleFunc[cmd]; ok {
+			return fun(stub, from, to, param)
+		}
+		return shim.Error("Invalid invoke function name.\r\n")
 	}
-	return shim.Error("Invalid invoke function name.\r\n")
 }
 
 func main() {

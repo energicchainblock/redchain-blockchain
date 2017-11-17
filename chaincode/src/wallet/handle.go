@@ -2,7 +2,7 @@ package wallet
 
 import (
 	"encoding/json"
-	//"fmt"
+	"fmt"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	pb "github.com/hyperledger/fabric/protos/peer"
 )
@@ -35,9 +35,9 @@ func InitHandle(stub shim.ChaincodeStubInterface, from, to, param string) pb.Res
 	if req.Available < 0 {
 		return shim.Error("available cannot be less than zero")
 	}
-	if req.Ico < 0 {
-		return shim.Error("ico cannot be less than zero")
-	}
+	// if req.Ico < 0 {
+	// 	return shim.Error("ico cannot be less than zero")
+	// }
 	toBytes, err := stub.GetState(to)
 	if err != nil {
 		return shim.Error(err.Error())
@@ -49,12 +49,19 @@ func InitHandle(stub shim.ChaincodeStubInterface, from, to, param string) pb.Res
 	if err != nil {
 		return shim.Error(err.Error())
 	}
-	retList := make([]*CommonReply, 0)
-	retList = append(retList, &CommonReply{
-		Address:   to,
-		Available: req.Available,
-	})
-	ret, _ := json.Marshal(retList)
+	// retList := make([]*CommonReply, 0)
+	// retList = append(retList, &CommonReply{
+	// 	Address:   to,
+	// 	Available: req.Available,
+	// })
+	reply := &CommonReply{
+		Address: to,
+		Value:   req.Available,
+		From:    "",
+		Fvalue:  0,
+		Amount:  req.Available,
+	}
+	ret, _ := json.Marshal(reply)
 	return shim.Success(ret)
 }
 
@@ -78,18 +85,22 @@ func TransferHandle(stub shim.ChaincodeStubInterface, from, to, param string) pb
 	if err != nil {
 		return shim.Error(err.Error())
 	}
-	if toByte == nil {
-		return shim.Error("to addr not exist")
-	}
+	//if toByte == nil {
+	//	return shim.Error("to addr not exist")
+	//}
 	fromWallet := &Wallet{}
 	err = json.Unmarshal(fromBytes, fromWallet)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
 	toWallet := &Wallet{}
-	err = json.Unmarshal(toByte, toWallet)
-	if err != nil {
-		return shim.Error(err.Error())
+	if toByte != nil {
+		err = json.Unmarshal(toByte, toWallet)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+	} else {
+		toWallet.Available = 0
 	}
 	if fromWallet.Available < req.Number {
 		return shim.Error("from addr have not enough coin")
@@ -106,16 +117,23 @@ func TransferHandle(stub shim.ChaincodeStubInterface, from, to, param string) pb
 	if err != nil {
 		return shim.Error(err.Error())
 	}
-	retList := make([]*CommonReply, 0)
-	retList = append(retList, &CommonReply{
-		Address:   from,
-		Available: fromWallet.Available,
-	})
-	retList = append(retList, &CommonReply{
-		Address:   to,
-		Available: toWallet.Available,
-	})
-	ret, _ := json.Marshal(retList)
+	// retList := make([]*CommonReply, 0)
+	// retList = append(retList, &CommonReply{
+	// 	Address:   from,
+	// 	Available: fromWallet.Available,
+	// })
+	// retList = append(retList, &CommonReply{
+	// 	Address:   to,
+	// 	Available: toWallet.Available,
+	// })
+	reply := &CommonReply{
+		Address: to,
+		Value:   toWallet.Available,
+		From:    from,
+		Fvalue:  fromWallet.Available,
+		Amount:  req.Number,
+	}
+	ret, _ := json.Marshal(reply)
 	return shim.Success(ret)
 }
 
@@ -146,11 +164,43 @@ func RewardHandle(stub shim.ChaincodeStubInterface, from, to, param string) pb.R
 	if err != nil {
 		return shim.Error(err.Error())
 	}
-	retList := make([]*CommonReply, 0)
-	retList = append(retList, &CommonReply{
-		Address:   to,
-		Available: toWallet.Available,
-	})
-	ret, _ := json.Marshal(retList)
+	// retList := make([]*CommonReply, 0)
+	// retList = append(retList, &CommonReply{
+	// 	Address:   to,
+	// 	Available: toWallet.Available,
+	// })
+	reply := &CommonReply{
+		Address: to,
+		Value:   toWallet.Available,
+		From:    from,
+		Fvalue:  0,
+		Amount:  req.Number,
+	}
+	ret, _ := json.Marshal(reply)
 	return shim.Success(ret)
+}
+
+func QueryHandle(stub shim.ChaincodeStubInterface, key string) pb.Response {
+	stateBytes, err := stub.GetState(key)
+	if err != nil {
+		return shim.Error("addr not exist")
+	}
+	return shim.Success(stateBytes)
+}
+
+func TotalHandle(stub shim.ChaincodeStubInterface, q string) pb.Response {
+	keys, err := stub.GetQueryResult(q)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	for {
+		if keys.HasNext() {
+			kv, _ := keys.Next()
+			fmt.Printf("kv=%v\r\n", kv)
+		} else {
+			break
+		}
+	}
+	keys.Close()
+	return shim.Success(nil)
 }
